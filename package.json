@@ -20,7 +20,11 @@
     "commands": [
       {
         "command": "gitgps.openCurrentLine",
-        "title": "GitGPS: Open current line in browser"
+        "title": "GitGPS: Open current line in a browser"
+      },
+      {
+        "command": "gitgps.openCurrentLinePermalink",
+        "title": "GitGPS: Open current line permalink in a browser"
       }
     ],
     "configuration": [

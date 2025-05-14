@@ -48,6 +48,8 @@ function getFileChanges(repository: Repository, uri: vscode.Uri): Change[] {
 
 function refineURL(url: string): string {
 	return url
+		// WARN: This breaks if by any chance the URL contains a port,
+		//       but I've never seen any git with a port
 		.replace(/^(https?:\/\/)?(?:(?:.+?)@)?(?:([^:]*?)|(.*?):(.*?))(?:.git)?$/,
 			(_match, schema, maybe_uri, maybe_domain, maybe_path) => {
 				console.log({ schema, maybe_uri, maybe_domain, maybe_path });
@@ -85,7 +87,12 @@ function formatLine(
 	}
 }
 
-async function openCurrentLine() {
+async function openCurrentLine(
+	{ permalink = false, }
+		: {
+			permalink?: boolean
+		} = {}
+	) {
 	const git = vscode.extensions.getExtension<GitExtension>("vscode.git")?.exports.getAPI(1);
 	if (git === undefined) {
 		vscode.window.showErrorMessage("Cannot get extension vscode.git")
@@ -115,7 +122,7 @@ async function openCurrentLine() {
 		const customUrl = getExtConfig().get<string>("customURL.url")!;
 		vscode.env.openExternal(vscode.Uri.parse(replaceVariablesCustomUrl(customUrl, {
 			username: (await getGitConfig(repository, "user.name")).replaceAll(" ", ""),
-			ref: repository.state.HEAD?.name,
+			ref: permalink ? repository.state.HEAD?.commit : repository.state.HEAD?.name,
 			lineGithub: formatLine({ lineStart, lineEnd, format: "github" }),
 			lineBitbucket: formatLine({ lineStart, lineEnd, format: "bitbucket" }),
 			filepath,
@@ -155,13 +162,18 @@ async function openCurrentLine() {
 		const isBitbucket = baseUri.authority.includes("bitbucket");
 
 		const line = formatLine({ lineStart, lineEnd, format: isBitbucket ? "bitbucket" : "github" });
+
+		const ref =
+			permalink
+			? repository.state.HEAD?.commit
+			: (repository.state.HEAD?.name ?? repository.state.HEAD?.commit);
 		
 		const uri =
 			isBitbucket
 			? vscode.Uri.joinPath(
 					baseUri,
 					"src",
-					repository.state.HEAD?.commit ?? "",
+					ref ?? "",
 					filepath,
 				).with({
 					query:
@@ -172,7 +184,7 @@ async function openCurrentLine() {
 				})
 			: vscode.Uri.joinPath(
 					baseUri,
-					"/blob", repository.state.HEAD?.name ?? "/",
+					"/blob", ref ?? "",
 					filepath,
 				).with({
 					fragment: `${line}`,
@@ -187,6 +199,10 @@ async function openCurrentLine() {
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('gitgps.openCurrentLine', openCurrentLine),
+		vscode.commands.registerCommand(
+			'gitgps.openCurrentLinePermalink',
+			() => openCurrentLine({ permalink: true })
+		),
 	);
 }
 
