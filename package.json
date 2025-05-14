@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "gitgps",
+  "displayName": "GitGPS",
+  "publisher": "potatochronicler",
+  "description": "Quickly get links to your code",
+  "author": {
+    "name": "PotatoChronicler"
+  },
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitgps.openCurrentLine",
+        "title": "GitGPS: Open current line in browser"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "GitGPS",
+        "type": "object",
+        "properties": {
+          "gitgps.prefferedRemote": {
+            "type": "string",
+            "scope": "window",
+            "description": "If a remote with this name exists, will always be used for line URLs if no upstream is set",
+            "default": "origin"
+          },
+          "gitgps.customURL.url": {
+            "type": "string",
+            "scope": "window",
+            "description": "If enabled, this URL will be used as the line URL. Default is probably invalid. Supported variables: username (git user.name w/o spaces), folderName, ref, filepath, line",
+            "default": "https://github.com/{username}/{folderName}/tree/{ref}/{filepath}#L{line}"
+          },
+          "gitgps.customURL.enabled": {
+            "type": "boolean",
+            "scope": "window",
+            "description": "Enables custom URL (instead of automatic from remote). Required if there is no remote in repository",
+            "default": false
+          }
+        }
+      }
+    ]
+  },
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.mjs",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.mjs --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.mjs --production",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "codium:develop": "codium --extensionDevelopmentPath=\"$(realpath .)\" --new-window"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "esbuild": "^0.25.3",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3"
+  }
+}
