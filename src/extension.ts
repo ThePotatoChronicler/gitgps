@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { type Remote, type GitExtension, type Repository, type Change, Status } from './vendored/git';
 import { Configuration } from './config';
+import { oneLine } from 'common-tags';
+import { assertUnreachable } from './util';
 
 function getExtConfig(scope?: Parameters<typeof vscode.workspace.getConfiguration>[1]) {
 	return vscode.workspace.getConfiguration("gitgps", scope);
@@ -46,9 +48,41 @@ function getFileChanges(repository: Repository, uri: vscode.Uri): Change[] {
 
 function refineURL(url: string): string {
 	return url
-		.replace(/^.+?@/, "")
-		.replace(/(.*?):(.*?)$/, (_match, host, path) => `https://${host}/${path}`)
-		.replace(/.git$/, "");
+		.replace(/^(https?:\/\/)?(?:(?:.+?)@)?(?:([^:]*?)|(.*?):(.*?))(?:.git)?$/,
+			(_match, schema, maybe_uri, maybe_domain, maybe_path) => {
+				console.log({ schema, maybe_uri, maybe_domain, maybe_path });
+				return (
+					schema ? schema : "https://"
+				)
+				+ (
+					maybe_uri
+					? maybe_uri
+					: `${maybe_domain}/${maybe_path}`
+				)
+			})
+}
+
+function formatLine(
+	{
+		lineStart, lineEnd, format = "github",
+	}
+		: { lineStart: number, lineEnd?: number, format?: "github" | "bitbucket" }
+): string {
+	if (format == "github") {
+		if (lineEnd === undefined || lineStart === lineEnd) {
+			return `L${lineStart}`
+		} else {
+			return `L${lineStart}-L${lineEnd}`;
+		}
+	} else if (format == "bitbucket") {
+		if (lineEnd === undefined || lineStart === lineEnd) {
+			return `${lineStart}`
+		} else {
+			return `${lineStart}:${lineEnd}`;
+		}
+	} else {
+		assertUnreachable(format);
+	}
 }
 
 async function openCurrentLine() {
@@ -73,7 +107,8 @@ async function openCurrentLine() {
 
 	const useCustomUrl = getExtConfig().get<boolean>("customURL.enabled")!;
 
-	const line = 1 + editor.selection.active.line;
+	const lineStart = 1 + editor.selection.start.line;
+	const lineEnd = 1 + editor.selection.end.line;
 	const filepath = vscode.workspace.asRelativePath(editor.document.uri);
 
 	if (useCustomUrl) {
@@ -81,7 +116,8 @@ async function openCurrentLine() {
 		vscode.env.openExternal(vscode.Uri.parse(replaceVariablesCustomUrl(customUrl, {
 			username: (await getGitConfig(repository, "user.name")).replaceAll(" ", ""),
 			ref: repository.state.HEAD?.name,
-			line: String(line),
+			lineGithub: formatLine({ lineStart, lineEnd, format: "github" }),
+			lineBitbucket: formatLine({ lineStart, lineEnd, format: "bitbucket" }),
 			filepath,
 			folderName: vscode.workspace.getWorkspaceFolder(editor.document.uri)?.name,
 		})));
@@ -100,6 +136,12 @@ async function openCurrentLine() {
 				vscode.window.showErrorMessage("Current file is untracked, and has no remote URL")
 				return;
 			}
+			if ([Status.MODIFIED, Status.BOTH_MODIFIED].includes(change.status)) {
+				vscode.window.showWarningMessage(oneLine`
+					Current file is modified, line number will most likely be wrong
+					(we do not support partially modified files)
+				`) // TODO: Maybe add support?
+			}
 		}
 
 		const remoteUrl = remote.fetchUrl ?? remote.pushUrl;
@@ -112,6 +154,8 @@ async function openCurrentLine() {
 
 		const isBitbucket = baseUri.authority.includes("bitbucket");
 
+		const line = formatLine({ lineStart, lineEnd, format: isBitbucket ? "bitbucket" : "github" });
+		
 		const uri =
 			isBitbucket
 			? vscode.Uri.joinPath(
@@ -131,8 +175,10 @@ async function openCurrentLine() {
 					"/blob", repository.state.HEAD?.name ?? "/",
 					filepath,
 				).with({
-					fragment: `L${line}`
+					fragment: `${line}`,
 				});
+
+		console.log({ uri, line, baseUri, remoteUrl })
 
 		vscode.env.openExternal(uri);
 	}

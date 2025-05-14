@@ -37,8 +37,8 @@
           "gitgps.customURL.url": {
             "type": "string",
             "scope": "window",
-            "description": "If enabled, this URL will be used as the line URL. Default is probably invalid. Supported variables: username (git user.name w/o spaces), folderName, ref, filepath, line",
-            "default": "https://github.com/{username}/{folderName}/tree/{ref}/{filepath}#L{line}"
+            "description": "If enabled, this URL will be used as the line URL. Default is probably invalid. Supported variables: username (git user.name w/o spaces), folderName, ref, filepath, lineGithub, lineBitbucket",
+            "default": "https://github.com/{username}/{folderName}/tree/{ref}/{filepath}#{lineGithub}"
           },
           "gitgps.customURL.enabled": {
             "type": "boolean",
@@ -65,13 +65,17 @@
     "codium:develop": "codium --extensionDevelopmentPath=\"$(realpath .)\" --new-window"
   },
   "devDependencies": {
-    "@types/vscode": "^1.100.0",
+    "@types/common-tags": "^1.8.4",
     "@types/node": "20.x",
+    "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
     "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "common-tags": "^1.8.2"
   }
 }
