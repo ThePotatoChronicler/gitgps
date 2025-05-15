@@ -127,6 +127,14 @@ async function openCurrentLine(
 
 		const changes = await git.status();
 
+		if (changes.ahead > 0) {
+			vscode.window.showWarningMessage("Git HEAD is ahead of upstream, line numbers will most likely be wrong");
+		}
+
+		if (changes.behind > 0) {
+			vscode.window.showWarningMessage("Git HEAD is behind upstream, line numbers will most likely be wrong");
+		}
+
 		if (changes.not_added.includes(filepath) || changes.created.includes(filepath)) {
 			vscode.window.showErrorMessage("Current file is untracked, and has no remote URL");
 			return;
@@ -134,7 +142,7 @@ async function openCurrentLine(
 
 		if (changes.modified.includes(filepath)) {
 			vscode.window.showWarningMessage(oneLine`
-				Current file is modified, line number will most likely be wrong
+				Current file is modified, line numbers will most likely be wrong
 				(we do not support partially modified files)
 			`); // TODO: Maybe add support?
 		}
@@ -174,6 +182,128 @@ async function openCurrentLine(
 	}
 }
 
+async function showLineDebugInfo() {
+	const editor = vscode.window.activeTextEditor;
+	if (editor === undefined) {
+		vscode.window.showErrorMessage("No active text editor");
+		return;
+	}
+
+	const git = simpleGit({
+		baseDir: dirname(editor.document.fileName),
+	});
+
+	if (!await git.checkIsRepo()) {
+		vscode.window.showErrorMessage("Currently opened file is not in a git repository");
+		return;
+	}
+
+	const toplevel = await git.revparse("--show-toplevel");
+
+	const lineStart = 1 + editor.selection.start.line;
+	const lineEnd = 1 + editor.selection.end.line;
+	const filepath = relative(toplevel, editor.document.fileName);
+
+	const headCommit = await git.revparse("HEAD");
+	const headSymbolic = await git.revparse(["--abbrev-ref", "HEAD"]);
+
+	const ref = headSymbolic;
+
+	const customUrlVariables = {
+		username: (await getGitConfig(git, "user.name") ?? "").replaceAll(" ", ""),
+		ref,
+		lineGithub: formatLine({ lineStart, lineEnd, format: "github" }),
+		lineBitbucket: formatLine({ lineStart, lineEnd, format: "bitbucket" }),
+		filepath,
+		folderName: vscode.workspace.getWorkspaceFolder(editor.document.uri)?.name,
+	};
+
+	const customUrl = getExtConfig().get<string>("customURL.url")!;
+	const generatedCustomUrl = vscode.Uri.parse(replaceVariablesCustomUrl(customUrl, customUrlVariables));
+
+	const remote = await getRemote(git);
+	if (remote === null) {
+		vscode.window.showErrorMessage("Current git repository has no remotes");
+		return;
+	}
+
+	const changes = await git.status();
+
+	if (changes.ahead > 0) {
+		vscode.window.showWarningMessage("Git HEAD is ahead of upstream, line numbers will most likely be wrong");
+	}
+
+	if (changes.behind > 0) {
+		vscode.window.showWarningMessage("Git HEAD is behind upstream, line numbers will most likely be wrong");
+	}
+
+	if (changes.not_added.includes(filepath) || changes.created.includes(filepath)) {
+		vscode.window.showErrorMessage("Current file is untracked, and has no remote URL");
+		return;
+	}
+
+	if (changes.modified.includes(filepath)) {
+		vscode.window.showWarningMessage(oneLine`
+			Current file is modified, line numbers will most likely be wrong
+			(we do not support partially modified files)
+		`); // TODO: Maybe add support?
+	}
+
+	const remoteUrl = remote.refs.fetch ?? remote.refs.push;
+	if (remoteUrl === undefined) {
+		vscode.window.showErrorMessage("No remote URL");
+		return;
+	}
+
+	const baseUri = vscode.Uri.parse(refineURL(remoteUrl));
+
+	const isBitbucket = baseUri.authority.includes("bitbucket");
+
+	const line = formatLine({ lineStart, lineEnd, format: isBitbucket ? "bitbucket" : "github" });
+
+	const uri =
+		isBitbucket
+		? vscode.Uri.joinPath(
+				baseUri,
+				"src",
+				headCommit ?? "",
+				filepath,
+			).with({
+				query: `at=${headSymbolic}`,
+				fragment: `lines-${line}`,
+			})
+		: vscode.Uri.joinPath(
+				baseUri,
+				"/blob", ref ?? "",
+				filepath,
+			).with({
+				fragment: `${line}`,
+			});
+
+	const debugFile = await vscode.workspace.openTextDocument({
+		content: JSON.stringify({
+			fileName: editor.document.fileName,
+			filepath,
+			toplevel,
+			lineStart,
+			lineEnd,
+			headCommit,
+			headSymbolic,
+			ref,
+			customUrlVariables,
+			customUrl,
+			generatedCustomUrl: generatedCustomUrl.toString(),
+			remote,
+			remoteUrl,
+			baseUri: baseUri.toString(),
+			isBitbucket,
+			line,
+			uri: uri.toString(),
+		}, null, 2)
+	});
+	vscode.window.showTextDocument(debugFile);
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('gitgps.openCurrentLine', openCurrentLine),
@@ -181,6 +311,10 @@ export function activate(context: vscode.ExtensionContext) {
 			'gitgps.openCurrentLinePermalink',
 			() => openCurrentLine({ permalink: true })
 		),
+		vscode.commands.registerCommand(
+			"gitgps.debug.showLineDebugInfo",
+			showLineDebugInfo,
+		)
 	);
 }
 
