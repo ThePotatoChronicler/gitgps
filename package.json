@@ -10,7 +10,7 @@
   "author": {
     "name": "PotatoChronicler"
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -57,9 +57,6 @@
       }
     ]
   },
-  "extensionDependencies": [
-    "vscode.git"
-  ],
   "scripts": {
     "ci:package": "vsce package --no-dependencies -o dist/gitgps.vsix",
     "ci:publish": "VSCE_STORE=file vsce publish -i dist/gitgps.vsix --skip-duplicate",
@@ -83,10 +80,13 @@
     "@vscode/vsce": "^3.3.2",
     "esbuild": "^0.25.3",
     "eslint": "^9.25.1",
+    "normalize-url": "^8.0.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "common-tags": "^1.8.2"
+    "common-tags": "^1.8.2",
+    "git-url-parse": "^16.1.0",
+    "simple-git": "^3.27.0"
   }
 }

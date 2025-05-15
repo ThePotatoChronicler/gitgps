@@ -1,6 +1,8 @@
 {
+	"$schema": "https://json.schemastore.org/tsconfig.json",
 	"compilerOptions": {
-		"module": "Node16",
+		"module": "Preserve",
+		"moduleResolution": "bundler",
 		"target": "ES2022",
 		"lib": [
 			"ES2022"
