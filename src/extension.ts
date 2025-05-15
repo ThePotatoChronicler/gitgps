@@ -14,36 +14,40 @@ function getRemote(repository: Repository): Remote | null {
 	const headRemote = repository.state.HEAD?.upstream?.remote;
 	if (headRemote !== undefined) {
 		const remote = remotes.find(r => r.name === headRemote);
-		if (remote !== undefined)
+		if (remote !== undefined) {
 			return remote;
+		}
 	}
 
 	const prefferedRemoteName = getExtConfig().get<Configuration["prefferedRemote"]>("prefferedRemote")!;
 
 	const prefferedRemote = remotes.find(r => r.name === prefferedRemoteName);
-	if (prefferedRemote !== undefined)
+	if (prefferedRemote !== undefined) {
 		return prefferedRemote;
+	}
 
-	if (remotes.length > 0)
+	if (remotes.length > 0) {
 		return remotes[0];
+	}
 
 	return null;
 }
 
 function replaceVariablesCustomUrl(customUrl: string, variables: { [v: string]: string | undefined }): string {
-	return customUrl.replace(/(?<!\\){([^{}]*?)(?<!\\)}/g, (_match, varKey) => variables[varKey] ?? "")
+	return customUrl.replace(/(?<!\\){([^{}]*?)(?<!\\)}/g, (_match, varKey) => variables[varKey] ?? "");
 }
 
 async function getGitConfig(repository: Repository, key: string): Promise<string> {
-	const localConfig = await repository.getConfig(key)
-	if (localConfig.length > 0)
+	const localConfig = await repository.getConfig(key);
+	if (localConfig.length > 0) {
 		return localConfig;
+	}
 
 	return await repository.getGlobalConfig(key);
 }
 
 function getFileChanges(repository: Repository, uri: vscode.Uri): Change[] {
-	return repository.state.workingTreeChanges.filter(c => c.uri.toString() == uri.toString());
+	return repository.state.workingTreeChanges.filter(c => c.uri.toString() === uri.toString());
 }
 
 function refineURL(url: string): string {
@@ -51,9 +55,8 @@ function refineURL(url: string): string {
 		// WARN: This breaks if by any chance the URL contains a port,
 		//       but I've never seen any git with a port
 		.replace(/^(https?:\/\/)?(?:(?:.+?)@)?(?:([^:]*?)|(.*?):(.*?))(?:.git)?$/,
-			(_match, schema, maybe_uri, maybe_domain, maybe_path) => {
-				console.log({ schema, maybe_uri, maybe_domain, maybe_path });
-				return (
+			(_match, schema, maybe_uri, maybe_domain, maybe_path) => 
+				(
 					schema ? schema : "https://"
 				)
 				+ (
@@ -61,7 +64,7 @@ function refineURL(url: string): string {
 					? maybe_uri
 					: `${maybe_domain}/${maybe_path}`
 				)
-			})
+			);
 }
 
 function formatLine(
@@ -70,15 +73,15 @@ function formatLine(
 	}
 		: { lineStart: number, lineEnd?: number, format?: "github" | "bitbucket" }
 ): string {
-	if (format == "github") {
+	if (format === "github") {
 		if (lineEnd === undefined || lineStart === lineEnd) {
-			return `L${lineStart}`
+			return `L${lineStart}`;
 		} else {
 			return `L${lineStart}-L${lineEnd}`;
 		}
-	} else if (format == "bitbucket") {
+	} else if (format === "bitbucket") {
 		if (lineEnd === undefined || lineStart === lineEnd) {
-			return `${lineStart}`
+			return `${lineStart}`;
 		} else {
 			return `${lineStart}:${lineEnd}`;
 		}
@@ -95,20 +98,20 @@ async function openCurrentLine(
 	) {
 	const git = vscode.extensions.getExtension<GitExtension>("vscode.git")?.exports.getAPI(1);
 	if (git === undefined) {
-		vscode.window.showErrorMessage("Cannot get extension vscode.git")
+		vscode.window.showErrorMessage("Cannot get extension vscode.git");
 		return;
 	}
 
 	const editor = vscode.window.activeTextEditor;
 	if (editor === undefined) {
-		vscode.window.showErrorMessage("No active text editor")
+		vscode.window.showErrorMessage("No active text editor");
 		return;
 	}
 
 	const repository = git.getRepository(editor.document.uri);
 
 	if (repository === null) {
-		vscode.window.showErrorMessage("Currently opened file is not in a git repository")
+		vscode.window.showErrorMessage("Currently opened file is not in a git repository");
 		return;
 	}
 
@@ -131,7 +134,7 @@ async function openCurrentLine(
 	} else {
 		const remote = getRemote(repository);
 		if (remote === null) {
-			vscode.window.showErrorMessage("Current git repository has no remotes")
+			vscode.window.showErrorMessage("Current git repository has no remotes");
 			return;
 		}
 
@@ -140,21 +143,21 @@ async function openCurrentLine(
 		if (changes.length > 0) {
 			const change = changes[0];
 			if (change.status === Status.UNTRACKED) {
-				vscode.window.showErrorMessage("Current file is untracked, and has no remote URL")
+				vscode.window.showErrorMessage("Current file is untracked, and has no remote URL");
 				return;
 			}
 			if ([Status.MODIFIED, Status.BOTH_MODIFIED].includes(change.status)) {
 				vscode.window.showWarningMessage(oneLine`
 					Current file is modified, line number will most likely be wrong
 					(we do not support partially modified files)
-				`) // TODO: Maybe add support?
+				`); // TODO: Maybe add support?
 			}
 		}
 
 		const remoteUrl = remote.fetchUrl ?? remote.pushUrl;
 		if (remoteUrl === undefined) {
 			vscode.window.showErrorMessage("No remote URL");
-			return
+			return;
 		}
 
 		const baseUri = vscode.Uri.parse(refineURL(remoteUrl));
@@ -189,8 +192,6 @@ async function openCurrentLine(
 				).with({
 					fragment: `${line}`,
 				});
-
-		console.log({ uri, line, baseUri, remoteUrl })
 
 		vscode.env.openExternal(uri);
 	}

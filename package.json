@@ -3,7 +3,10 @@
   "name": "gitgps",
   "displayName": "GitGPS",
   "publisher": "potatochronicler",
-  "description": "Quickly get links to your code",
+  "description": "Quickly open links to your lines of code",
+  "repository": {
+    "url": "https://github.com/ThePotatoChronicler/gitgps"
+  },
   "author": {
     "name": "PotatoChronicler"
   },
@@ -58,12 +61,15 @@
     "vscode.git"
   ],
   "scripts": {
+    "ci:package": "vsce package --no-dependencies -o dist/gitgps.vsix",
+    "ci:publish": "VSCE_STORE=file vsce publish -i dist/gitgps.vsix --skip-duplicate",
+    "ci": "pnpm run ci:package && pnpm run ci:publish && node build/ci-output.mjs",
     "vscode:prepublish": "pnpm run package",
-    "compile": "pnpm run check-types && pnpm run lint && node esbuild.mjs",
+    "compile": "pnpm run check-types && pnpm run lint && node build/esbuild.mjs",
     "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.mjs --watch",
+    "watch:esbuild": "node build/esbuild.mjs --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "pnpm run check-types && pnpm run lint && node esbuild.mjs --production",
+    "package": "pnpm run check-types && pnpm run lint && node build/esbuild.mjs --production",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "codium:develop": "codium --extensionDevelopmentPath=\"$(realpath .)\" --new-window"
@@ -71,9 +77,10 @@
   "devDependencies": {
     "@types/common-tags": "^1.8.4",
     "@types/node": "20.x",
-    "@types/vscode": "^1.100.0",
+    "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/vsce": "^3.3.2",
     "esbuild": "^0.25.3",
     "eslint": "^9.25.1",
     "npm-run-all": "^4.1.5",

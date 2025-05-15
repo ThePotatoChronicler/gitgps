@@ -1,0 +1,44 @@
+on:
+  push:
+    tags:
+      - "release/*"
+
+permissions:
+  contents: write
+
+name: Deploy Extension
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Publish to Visual Studio Marketplace
+        run: pnpm run ci
+        id: publishMarketplace
+        env:
+          VSCE_PAT: ${{ secrets.MARKETPLACE_PAT }}
+      - name: Upload Extension Package as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitgps.vsix
+          path: ${{ steps.publishMarketplace.outputs.vsixPath }}
+          if-no-files-found: error
+      - id: formatRef
+        run: printf "%s" ${{ github.ref_name }} | cut -d "/" -f2 | awk '{ print "fmtRef=" $0 }' >> "$GITHUB_OUTPUT"
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.formatRef.outputs.fmtRef }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.publishMarketplace.outputs.vsixPath }}
