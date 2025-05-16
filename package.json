@@ -3,20 +3,21 @@
   "name": "gitgps",
   "displayName": "GitGPS",
   "publisher": "potatochronicler",
-  "description": "Quickly open links to your lines of code",
+  "description": "Quickly open links to lines of code in git",
   "repository": {
     "url": "https://github.com/ThePotatoChronicler/gitgps"
   },
   "author": {
     "name": "PotatoChronicler"
   },
-  "version": "0.0.3",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
   ],
+  "icon": "assets/gitgps.png",
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
