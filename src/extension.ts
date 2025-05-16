@@ -74,12 +74,12 @@ function formatLine(
 	}
 }
 
-async function openCurrentLine(
+async function getCurrentLine(
 	{ permalink = false, }
 		: {
 			permalink?: boolean
 		} = {}
-	) {
+	): Promise<undefined | vscode.Uri> {
 	const editor = vscode.window.activeTextEditor;
 	if (editor === undefined) {
 		vscode.window.showErrorMessage("No active text editor");
@@ -110,14 +110,14 @@ async function openCurrentLine(
 
 	if (useCustomUrl) {
 		const customUrl = getExtConfig().get<string>("customURL.url")!;
-		vscode.env.openExternal(vscode.Uri.parse(replaceVariablesCustomUrl(customUrl, {
+		return vscode.Uri.parse(replaceVariablesCustomUrl(customUrl, {
 			username: (await getGitConfig(git, "user.name") ?? "").replaceAll(" ", ""),
 			ref,
 			lineGithub: formatLine({ lineStart, lineEnd, format: "github" }),
 			lineBitbucket: formatLine({ lineStart, lineEnd, format: "bitbucket" }),
 			filepath,
 			folderName: vscode.workspace.getWorkspaceFolder(editor.document.uri)?.name,
-		})));
+		}));
 	} else {
 		const remote = await getRemote(git);
 		if (remote === null) {
@@ -178,7 +178,7 @@ async function openCurrentLine(
 					fragment: `${line}`,
 				});
 
-		vscode.env.openExternal(uri);
+		return uri;
 	}
 }
 
@@ -304,12 +304,36 @@ async function showLineDebugInfo() {
 	vscode.window.showTextDocument(debugFile);
 }
 
+async function openCurrentLine(...opts: Parameters<typeof getCurrentLine>) {
+	const uri = await getCurrentLine(...opts);
+	if (uri !== undefined)
+		await vscode.env.openExternal(uri);
+}
+
+async function copyCurrentLine(...opts: Parameters<typeof getCurrentLine>) {
+	const uri = await getCurrentLine(...opts);
+	if (uri !== undefined) {
+		await vscode.env.clipboard.writeText(uri.toString(true));
+	}
+
+	const barItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, Number.MAX_SAFE_INTEGER - 1000);
+	barItem.text = "Successfully copied to clipboard!";
+	barItem.color = "green";
+	barItem.show();
+	setTimeout(() => barItem.dispose(), 2000);
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('gitgps.openCurrentLine', openCurrentLine),
 		vscode.commands.registerCommand(
 			'gitgps.openCurrentLinePermalink',
 			() => openCurrentLine({ permalink: true })
+		),
+		vscode.commands.registerCommand('gitgps.copyCurrentLine', copyCurrentLine),
+		vscode.commands.registerCommand(
+			'gitgps.copyCurrentLinePermalink',
+			() => copyCurrentLine({ permalink: true })
 		),
 		vscode.commands.registerCommand(
 			"gitgps.debug.showLineDebugInfo",

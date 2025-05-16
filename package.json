@@ -30,6 +30,14 @@
         "title": "GitGPS: Open current line permalink in a browser"
       },
       {
+        "command": "gitgps.copyCurrentLine",
+        "title": "GitGPS: Copy current line to system clipboard"
+      },
+      {
+        "command": "gitgps.copyCurrentLinePermalink",
+        "title": "GitGPS: Copy current line permalink to system clipboard"
+      },
+      {
         "command": "gitgps.debug.showLineDebugInfo",
         "title": "GitGPS: Debug: Show line debug info"
       }
