@@ -81,7 +81,7 @@
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "package": "pnpm run check-types && pnpm run lint && node build/esbuild.mjs --production",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
+    "lint": "eslint",
     "codium:develop": "codium --extensionDevelopmentPath=\"$(realpath .)\" --new-window"
   },
   "devDependencies": {

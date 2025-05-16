@@ -306,8 +306,9 @@ async function showLineDebugInfo() {
 
 async function openCurrentLine(...opts: Parameters<typeof getCurrentLine>) {
 	const uri = await getCurrentLine(...opts);
-	if (uri !== undefined)
+	if (uri !== undefined) {
 		await vscode.env.openExternal(uri);
+	}
 }
 
 async function copyCurrentLine(...opts: Parameters<typeof getCurrentLine>) {
