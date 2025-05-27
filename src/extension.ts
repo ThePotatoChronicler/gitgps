@@ -17,13 +17,15 @@ function stripBranchFromRemote(remote: string): string {
 async function getRemote(git: SimpleGit): Promise<RemoteWithRefs | null> {
 	const remotes = await git.getRemotes(true);
 
-	const headRemote = stripBranchFromRemote(await git.revparse(["--abbrev-ref", "@{upstream}"]));
-	if (headRemote.length > 0) {
-		const remote = remotes.find(r => r.name === headRemote);
-		if (remote !== undefined) {
-			return remote;
+	try {
+		const headRemote = stripBranchFromRemote(await git.revparse(["--abbrev-ref", "@{upstream}"]));
+		if (headRemote.length > 0) {
+			const remote = remotes.find(r => r.name === headRemote);
+			if (remote !== undefined) {
+				return remote;
+			}
 		}
-	}
+	} catch {}
 
 	const prefferedRemoteName = getExtConfig().get<Configuration["prefferedRemote"]>("prefferedRemote")!;
 
@@ -207,7 +209,10 @@ async function showLineDebugInfo() {
 	const headCommit = await git.revparse("HEAD");
 	const headSymbolic = await git.revparse(["--abbrev-ref", "HEAD"]);
 
-	const ref = headSymbolic;
+  // If we're not on a branch, becomes perma-link
+  // TODO: Handle tags (maybe by picking the only one pointing at HEAD)
+  // Also maybe breaks with a branch and/or tag named HEAD?
+	const ref = headSymbolic === "HEAD" ? headCommit : headSymbolic;
 
 	const customUrlVariables = {
 		username: (await getGitConfig(git, "user.name") ?? "").replaceAll(" ", ""),
